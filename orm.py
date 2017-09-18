@@ -26,7 +26,8 @@ def select(sql, args, size=None):
     global __pool
     with (yield from __pool) as conn:
         cur = yield from conn.cursor(aiomysql.DictCursor)
-        yield from cur.execute(sql.replace('?', '%s'), args or ())
+        #SQL语句的占位符是?，而MySQL的占位符是%s
+		yield from cur.execute(sql.replace('?', '%s'), args or ())
         if size:
             rs = yield from cur.fetchmany(size)
         else:
@@ -34,3 +35,18 @@ def select(sql, args, size=None):
         yield from cur.close()
         logging.info('rows returned: %s' % len(rs))
         return rs
+		
+#delete update insert的执行函数
+@asyncio.coroutine
+def execute(sql, args):
+    log(sql)
+    with (yield from __pool) as conn:
+        try:
+            cur = yield from conn.cursor()
+            yield from cur.execute(sql.replace('?', '%s'), args)
+            affected = cur.rowcount
+            yield from cur.close()
+        except BaseException as e:
+            raise
+		#返回被影响的行数
+        return affected
